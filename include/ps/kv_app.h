@@ -350,7 +350,7 @@ class KVWorker : public SimpleApp {
    * \brief send the kv list to all servers
    * @param timestamp the timestamp of the request
    * @param push whether or not it is a push request
-   * @param push whether or not it is a pull request
+   * @param pull whether or not it is a pull request
    * @param cmd command
    */
   void Send(int timestamp, bool push, bool pull, int cmd, const KVPairs<Val>& kvs);

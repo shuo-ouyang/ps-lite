@@ -9,7 +9,7 @@
 namespace ps {
 
 /**
- * \brief the format for a received request or reponse for \ref SimpleApp
+ * \brief the format for a received request or response for \ref SimpleApp
  */
 struct SimpleData {
   /** \brief the int head */
@@ -27,7 +27,7 @@ struct SimpleData {
 /**
  * \brief a simple app
  *
- * It provides basic communcation with a pair of int (head) and string (body)
+ * It provides basic communication with a pair of int (head) and string (body)
  */
 class SimpleApp {
  public:

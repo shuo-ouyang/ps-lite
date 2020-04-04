@@ -9,7 +9,7 @@
 #include "ps/base.h"
 /** \brief communicating with a pair of (int, string). */
 #include "ps/simple_app.h"
-/** \brief communcating with a list of key-value paris. */
+/** \brief communicating with a list of key-value pairs. */
 #include "ps/kv_app.h"
 namespace ps {
 /** \brief Returns the number of worker nodes */

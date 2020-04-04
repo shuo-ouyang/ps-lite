@@ -36,7 +36,7 @@ class Customer {
    * \param app_id the globally unique id indicating the application the postoffice
    *               serving for
    * \param customer_id the locally unique id indicating the customer of a postoffice
-   * \param recv_handle the functino for processing a received message
+   * \param recv_handle the function for processing a received message
    */
   Customer(int app_id, int customer_id, const RecvHandle& recv_handle);
 
