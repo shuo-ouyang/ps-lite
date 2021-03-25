@@ -13,6 +13,7 @@
 #include <memory>
 #include "ps/internal/message.h"
 #include "ps/internal/threadsafe_pqueue.h"
+#include "ps/internal/timeline.h"
 namespace ps {
 
 /**
@@ -50,11 +51,12 @@ class Customer {
    */
   inline int app_id() { return app_id_; }
 
-
   /**
    * \brief return the locally unique customer id
    */
   inline int customer_id() { return customer_id_; }
+
+  inline Timeline* timeline() { return timeline_; }
 
   /**
    * \brief get a timestamp for a new request. threadsafe
@@ -62,7 +64,6 @@ class Customer {
    * \return the timestamp of this request
    */
   int NewRequest(int recver);
-
 
   /**
    * \brief wait until the request is finished. threadsafe
@@ -85,7 +86,13 @@ class Customer {
    * \brief accept a received message from \ref Van. threadsafe
    * \param recved the received the message
    */
-  inline void Accept(const Message& recved) {
+  inline void Accept(Message& recved) {
+    // push/pull request/response end
+    if (recved.meta.request) {
+      recved.meta.request_end = this->timeline_->TimeSinceStartMicros();
+    } else {
+      recved.meta.response_end = this->timeline_->TimeSinceStartMicros();
+    }
     recv_queue_.Push(recved);
   }
 
@@ -98,6 +105,8 @@ class Customer {
   int app_id_;
 
   int customer_id_;
+
+  Timeline* timeline_;
 
   RecvHandle recv_handle_;
   ThreadsafePQueue recv_queue_;

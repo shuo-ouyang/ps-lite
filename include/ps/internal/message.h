@@ -156,7 +156,8 @@ struct Meta {
       ss << ", app_id=" << app_id
          << ", customer_id=" << customer_id
          << ", simple_app=" << simple_app
-         << ", push=" << push;
+         << ", push=" << push
+         << ", pull=" << pull;
     }
     if (head != kEmpty) ss << ", head=" << head;
     if (body.size()) ss << ", body=" << body;
@@ -197,6 +198,11 @@ struct Meta {
   int data_size = 0;
   /** \brief message priority */
   int priority = 0;
+
+  long long request_begin = 0;
+  long long request_end = 0;
+  long long response_begin = 0;
+  long long response_end = 0;
 };
 /**
  * \brief messages that communicated amaong nodes.

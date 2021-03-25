@@ -41,6 +41,11 @@ template<typename T> class ThreadsafeQueue {
     queue_.pop();
   }
 
+  bool Empty() const {
+    std::lock_guard<std::mutex> lk(mu_);
+    return queue_.empty();
+  }
+
  private:
   mutable std::mutex mu_;
   std::queue<T> queue_;

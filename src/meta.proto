@@ -57,4 +57,9 @@ message PBMeta {
   optional int32 data_size = 11;
   // priority
   optional int32 priority = 13 [default = 0];
+
+  optional int64 request_begin = 14 [default = 0];
+  optional int64 request_end = 15 [default = 0];
+  optional int64 response_begin = 16 [default = 0];
+  optional int64 response_end = 17 [default = 0];
 }

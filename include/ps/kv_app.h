@@ -51,7 +51,7 @@ struct KVPairs {
  * \tparam Val the type of value, which should be primitive types such as
  * int32_t and float
  */
-template<typename Val>
+template <typename Val>
 class KVWorker : public SimpleApp {
  public:
   /** avoid too many this-> */
@@ -78,7 +78,10 @@ class KVWorker : public SimpleApp {
   }
 
   /** \brief deconstructor */
-  virtual ~KVWorker() { delete obj_; obj_ = nullptr; }
+  virtual ~KVWorker() {
+    delete obj_;
+    obj_ = nullptr;
+  }
 
   /**
    * \brief Pushes a list of key-value pairs to all server nodes.
@@ -111,15 +114,10 @@ class KVWorker : public SimpleApp {
    * @param cb the callback which is called when the push is finished.
    * @return the timestamp of this request
    */
-  int Push(const std::vector<Key>& keys,
-           const std::vector<Val>& vals,
-           const std::vector<int>& lens = {},
-           int cmd = 0,
-           const Callback& cb = nullptr,
+  int Push(const std::vector<Key>& keys, const std::vector<Val>& vals,
+           const std::vector<int>& lens = {}, int cmd = 0, const Callback& cb = nullptr,
            int priority = 0) {
-    return ZPush(
-        SArray<Key>(keys), SArray<Val>(vals), SArray<int>(lens), cmd, cb,
-        priority);
+    return ZPush(SArray<Key>(keys), SArray<Val>(vals), SArray<int>(lens), cmd, cb, priority);
   }
 
   /**
@@ -148,12 +146,8 @@ class KVWorker : public SimpleApp {
    * @param cb the callback which is called when the pull is finished.
    * @return the timestamp of this request
    */
-  int Pull(const std::vector<Key>& keys,
-           std::vector<Val>* vals,
-           std::vector<int>* lens = nullptr,
-           int cmd = 0,
-           const Callback& cb = nullptr,
-           int priority = 0) {
+  int Pull(const std::vector<Key>& keys, std::vector<Val>* vals, std::vector<int>* lens = nullptr,
+           int cmd = 0, const Callback& cb = nullptr, int priority = 0) {
     SArray<Key> skeys(keys);
     int ts = AddPullCB(skeys, vals, lens, cmd, cb);
     KVPairs<Val> kvs;
@@ -191,12 +185,8 @@ class KVWorker : public SimpleApp {
    * @param cb the callback which is called when the pull is finished.
    * @return the timestamp of this request
    */
-  int PushPull(const std::vector<Key>& keys,
-               const std::vector<Val>& vals,
-               std::vector<Val>* outs,
-               std::vector<int>* lens = nullptr,
-               int cmd = 0,
-               const Callback& cb = nullptr,
+  int PushPull(const std::vector<Key>& keys, const std::vector<Val>& vals, std::vector<Val>* outs,
+               std::vector<int>* lens = nullptr, int cmd = 0, const Callback& cb = nullptr,
                int priority = 0) {
     CHECK_NOTNULL(outs);
     if (outs->empty())
@@ -207,14 +197,15 @@ class KVWorker : public SimpleApp {
     SArray<Key> skeys(keys);
     SArray<Val> svals(vals);
     auto souts = new SArray<Val>(outs->data(), outs->size());
-    SArray<int>* slens = lens ?
-        new SArray<int>(lens->data(), lens->size()) : nullptr;
-    int ts = ZPushPull(skeys, svals, souts, slens, cmd,
+    SArray<int>* slens = lens ? new SArray<int>(lens->data(), lens->size()) : nullptr;
+    int ts = ZPushPull(
+        skeys, svals, souts, slens, cmd,
         [this, cb, souts, slens]() {
           delete souts;
           delete slens;
           if (cb) cb();
-        }, priority);
+        },
+        priority);
     return ts;
   }
 
@@ -240,12 +231,8 @@ class KVWorker : public SimpleApp {
    * responsibility to keep the content to be not changed before actually
    * finished.
    */
-  int ZPush(const SArray<Key>& keys,
-            const SArray<Val>& vals,
-            const SArray<int>& lens = {},
-            int cmd = 0,
-            const Callback& cb = nullptr,
-            int priority = 0) {
+  int ZPush(const SArray<Key>& keys, const SArray<Val>& vals, const SArray<int>& lens = {},
+            int cmd = 0, const Callback& cb = nullptr, int priority = 0) {
     int ts = obj_->NewRequest(kServerGroup);
     AddCallback(ts, cb);
     KVPairs<Val> kvs;
@@ -265,12 +252,8 @@ class KVWorker : public SimpleApp {
    * responsibility to keep the content to be not changed before actually
    * finished.
    */
-  int ZPull(const SArray<Key>& keys,
-            SArray<Val>* vals,
-            SArray<int>* lens = nullptr,
-            int cmd = 0,
-            const Callback& cb = nullptr,
-            int priority = 0) {
+  int ZPull(const SArray<Key>& keys, SArray<Val>* vals, SArray<int>* lens = nullptr, int cmd = 0,
+            const Callback& cb = nullptr, int priority = 0) {
     int ts = AddPullCB(keys, vals, lens, cmd, cb);
     KVPairs<Val> kvs;
     kvs.keys = keys;
@@ -287,20 +270,15 @@ class KVWorker : public SimpleApp {
    * responsibility to keep the content to be not changed before actually
    * finished.
    */
-  int ZPushPull(const SArray<Key>& keys,
-                const SArray<Val>& vals,
-                SArray<Val>* outs,
-                SArray<int>* lens = nullptr,
-                int cmd = 0,
-                const Callback& cb = nullptr,
+  int ZPushPull(const SArray<Key>& keys, const SArray<Val>& vals, SArray<Val>* outs,
+                SArray<int>* lens = nullptr, int cmd = 0, const Callback& cb = nullptr,
                 int priority = 0) {
     int ts = AddPullCB(keys, outs, lens, cmd, cb);
     KVPairs<Val> kvs;
     kvs.keys = keys;
     kvs.vals = vals;
     kvs.priority = priority;
-    if (lens)
-      kvs.lens = *lens;
+    if (lens) kvs.lens = *lens;
     Send(ts, true, true, cmd, kvs);
     return ts;
   }
@@ -312,15 +290,15 @@ class KVWorker : public SimpleApp {
    * \param sliced the sliced lists. slices[i] should only contains keys in
    * ranges[i] and the according values
    */
-  using Slicer = std::function<void(
-      const KVPairs<Val>& send, const std::vector<Range>& ranges,
-      SlicedKVs* sliced)>;
+  using Slicer = std::function<void(const KVPairs<Val>& send, const std::vector<Range>& ranges,
+                                    SlicedKVs* sliced)>;
 
   /**
    * \brief set a user-defined slicer
    */
   void set_slicer(const Slicer& slicer) {
-    CHECK(slicer); slicer_ = slicer;
+    CHECK(slicer);
+    slicer_ = slicer;
   }
 
  private:
@@ -328,8 +306,7 @@ class KVWorker : public SimpleApp {
    * \brief internal pull, C/D can be either SArray or std::vector
    */
   template <typename C, typename D>
-  int AddPullCB(const SArray<Key>& keys, C* vals, D* lens,
-            int cmd, const Callback& cb);
+  int AddPullCB(const SArray<Key>& keys, C* vals, D* lens, int cmd, const Callback& cb);
   /**
    * \brief add a callback for a request. threadsafe.
    * @param cb callback
@@ -357,9 +334,7 @@ class KVWorker : public SimpleApp {
   /** \brief internal receive handle */
   void Process(const Message& msg);
   /** \brief default kv slicer */
-  void DefaultSlicer(const KVPairs<Val>& send,
-                     const std::vector<Range>& ranges,
-                     SlicedKVs* sliced);
+  void DefaultSlicer(const KVPairs<Val>& send, const std::vector<Range>& ranges, SlicedKVs* sliced);
 
   /** \brief data buffer for received kvs for each timestamp */
   std::unordered_map<int, std::vector<KVPairs<Val>>> recv_kvs_;
@@ -385,6 +360,9 @@ struct KVMeta {
   int timestamp;
   /** \brief the customer id of worker */
   int customer_id;
+
+  long long request_begin;
+  long long request_end;
 };
 
 /**
@@ -403,7 +381,10 @@ class KVServer : public SimpleApp {
   }
 
   /** \brief deconstructor */
-  virtual ~KVServer() { delete obj_; obj_ = nullptr; }
+  virtual ~KVServer() {
+    delete obj_;
+    obj_ = nullptr;
+  }
 
   /**
    * \brief the handle to process a push/pull request from a worker
@@ -411,9 +392,8 @@ class KVServer : public SimpleApp {
    * \param req_data kv pairs of this request
    * \param server this pointer
    */
-  using ReqHandle = std::function<void(const KVMeta& req_meta,
-                                       const KVPairs<Val>& req_data,
-                                       KVServer* server)>;
+  using ReqHandle =
+      std::function<void(const KVMeta& req_meta, const KVPairs<Val>& req_data, KVServer* server)>;
   void set_request_handle(const ReqHandle& request_handle) {
     CHECK(request_handle) << "invalid request handle";
     request_handle_ = request_handle;
@@ -433,20 +413,19 @@ class KVServer : public SimpleApp {
   ReqHandle request_handle_;
 };
 
-
 /**
  * \brief an example handle adding pushed kv into store
  */
 template <typename Val>
 struct KVServerDefaultHandle {
-  void operator()(
-      const KVMeta& req_meta, const KVPairs<Val>& req_data, KVServer<Val>* server) {
+  void operator()(const KVMeta& req_meta, const KVPairs<Val>& req_data, KVServer<Val>* server) {
     size_t n = req_data.keys.size();
     KVPairs<Val> res;
     if (!req_meta.pull) {
       CHECK_EQ(n, req_data.vals.size());
     } else {
-      res.keys = req_data.keys; res.vals.resize(n);
+      res.keys = req_data.keys;
+      res.vals.resize(n);
     }
     for (size_t i = 0; i < n; ++i) {
       Key key = req_data.keys[i];
@@ -462,21 +441,24 @@ struct KVServerDefaultHandle {
   std::unordered_map<Key, Val> store;
 };
 
-
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename Val>
 void KVServer<Val>::Process(const Message& msg) {
+  // start to process push/pull request
   if (msg.meta.simple_app) {
-    SimpleApp::Process(msg); return;
+    SimpleApp::Process(msg);
+    return;
   }
   KVMeta meta;
-  meta.cmd       = msg.meta.head;
-  meta.push      = msg.meta.push;
-  meta.pull      = msg.meta.pull;
-  meta.sender    = msg.meta.sender;
+  meta.cmd = msg.meta.head;
+  meta.push = msg.meta.push;
+  meta.pull = msg.meta.pull;
+  meta.sender = msg.meta.sender;
   meta.timestamp = msg.meta.timestamp;
   meta.customer_id = msg.meta.customer_id;
+  meta.request_begin = msg.meta.request_begin;
+  meta.request_end = msg.meta.request_end;
   KVPairs<Val> data;
   int n = msg.data.size();
   if (n) {
@@ -490,6 +472,7 @@ void KVServer<Val>::Process(const Message& msg) {
     }
   }
   CHECK(request_handle_);
+  obj_->timeline()->Write(msg.meta);
   request_handle_(meta, data, this);
 }
 
@@ -498,12 +481,13 @@ void KVServer<Val>::Response(const KVMeta& req, const KVPairs<Val>& res) {
   Message msg;
   msg.meta.app_id = obj_->app_id();
   msg.meta.customer_id = req.customer_id;
-  msg.meta.request     = false;
-  msg.meta.push        = req.push;
-  msg.meta.pull        = req.pull;
-  msg.meta.head        = req.cmd;
-  msg.meta.timestamp   = req.timestamp;
-  msg.meta.recver      = req.sender;
+  msg.meta.request = false;
+  msg.meta.push = req.push;
+  msg.meta.pull = req.pull;
+  msg.meta.head = req.cmd;
+  msg.meta.timestamp = req.timestamp;
+  msg.meta.recver = req.sender;
+  msg.meta.sender = Postoffice::Get()->ServerRankToID(Postoffice::Get()->my_rank());
   if (res.keys.size()) {
     msg.AddData(res.keys);
     msg.AddData(res.vals);
@@ -511,18 +495,21 @@ void KVServer<Val>::Response(const KVMeta& req, const KVPairs<Val>& res) {
       msg.AddData(res.lens);
     }
   }
+  // push/pull response begin
+  msg.meta.request_begin = req.request_begin;
+  msg.meta.request_end = req.request_end;
+  msg.meta.response_begin = obj_->timeline()->TimeSinceStartMicros();
   Postoffice::Get()->van()->Send(msg);
 }
 
 template <typename Val>
-void KVWorker<Val>::DefaultSlicer(
-    const KVPairs<Val>& send, const std::vector<Range>& ranges,
-    typename KVWorker<Val>::SlicedKVs* sliced) {
+void KVWorker<Val>::DefaultSlicer(const KVPairs<Val>& send, const std::vector<Range>& ranges,
+                                  typename KVWorker<Val>::SlicedKVs* sliced) {
   sliced->resize(ranges.size());
 
   // find the positions in msg.key
   size_t n = ranges.size();
-  std::vector<size_t> pos(n+1);
+  std::vector<size_t> pos(n + 1);
   const Key* begin = send.keys.begin();
   const Key* end = send.keys.end();
   for (size_t i = 0; i < n; ++i) {
@@ -530,11 +517,11 @@ void KVWorker<Val>::DefaultSlicer(
       pos[0] = std::lower_bound(begin, end, ranges[0].begin()) - begin;
       begin += pos[0];
     } else {
-      CHECK_EQ(ranges[i-1].end(), ranges[i].begin());
+      CHECK_EQ(ranges[i - 1].end(), ranges[i].begin());
     }
     size_t len = std::lower_bound(begin, end, ranges[i].end()) - begin;
     begin += len;
-    pos[i+1] = pos[i] + len;
+    pos[i + 1] = pos[i] + len;
 
     // don't send it to servers for empty kv
     sliced->at(i).first = (len != 0);
@@ -553,20 +540,20 @@ void KVWorker<Val>::DefaultSlicer(
 
   // slice
   for (size_t i = 0; i < n; ++i) {
-    if (pos[i+1] == pos[i]) {
+    if (pos[i + 1] == pos[i]) {
       sliced->at(i).first = false;
       continue;
     }
     sliced->at(i).first = true;
     auto& kv = sliced->at(i).second;
-    kv.keys = send.keys.segment(pos[i], pos[i+1]);
+    kv.keys = send.keys.segment(pos[i], pos[i + 1]);
     if (send.lens.size()) {
-      kv.lens = send.lens.segment(pos[i], pos[i+1]);
+      kv.lens = send.lens.segment(pos[i], pos[i + 1]);
       for (int l : kv.lens) val_end += l;
       kv.vals = send.vals.segment(val_begin, val_end);
       val_begin = val_end;
     } else {
-      kv.vals = send.vals.segment(pos[i]*k, pos[i+1]*k);
+      kv.vals = send.vals.segment(pos[i] * k, pos[i + 1] * k);
     }
   }
 }
@@ -593,13 +580,14 @@ void KVWorker<Val>::Send(int timestamp, bool push, bool pull, int cmd, const KVP
     Message msg;
     msg.meta.app_id = obj_->app_id();
     msg.meta.customer_id = obj_->customer_id();
-    msg.meta.request     = true;
-    msg.meta.push        = push;
-    msg.meta.pull        = pull;
-    msg.meta.head        = cmd;
-    msg.meta.timestamp   = timestamp;
-    msg.meta.recver      = Postoffice::Get()->ServerRankToID(i);
-    msg.meta.priority    = kvs.priority;
+    msg.meta.request = true;
+    msg.meta.push = push;
+    msg.meta.pull = pull;
+    msg.meta.head = cmd;
+    msg.meta.timestamp = timestamp;
+    msg.meta.sender = Postoffice::Get()->WorkerRankToID(Postoffice::Get()->my_rank());
+    msg.meta.recver = Postoffice::Get()->ServerRankToID(i);
+    msg.meta.priority = kvs.priority;
     const auto& kvs = s.second;
     if (kvs.keys.size()) {
       msg.AddData(kvs.keys);
@@ -608,16 +596,20 @@ void KVWorker<Val>::Send(int timestamp, bool push, bool pull, int cmd, const KVP
         msg.AddData(kvs.lens);
       }
     }
+    // push/pull request begin
+    msg.meta.request_begin = obj_->timeline()->TimeSinceStartMicros();
     Postoffice::Get()->van()->Send(msg);
   }
 }
 
-
 template <typename Val>
 void KVWorker<Val>::Process(const Message& msg) {
+  // push/pull response end
   if (msg.meta.simple_app) {
-    SimpleApp::Process(msg); return;
+    SimpleApp::Process(msg);
+    return;
   }
+  obj_->timeline()->Write(msg.meta);
   // store the data for pulling
   int ts = msg.meta.timestamp;
   if (msg.meta.pull) {
@@ -634,7 +626,7 @@ void KVWorker<Val>::Process(const Message& msg) {
   }
 
   // finished, run callbacks
-  if (obj_->NumResponse(ts) == Postoffice::Get()->num_servers() - 1)  {
+  if (obj_->NumResponse(ts) == Postoffice::Get()->num_servers() - 1) {
     RunCallback(ts);
   }
 }
@@ -656,62 +648,59 @@ void KVWorker<Val>::RunCallback(int timestamp) {
 
 template <typename Val>
 template <typename C, typename D>
-int KVWorker<Val>::AddPullCB(
-    const SArray<Key>& keys, C* vals, D* lens, int cmd,
-    const Callback& cb) {
+int KVWorker<Val>::AddPullCB(const SArray<Key>& keys, C* vals, D* lens, int cmd,
+                             const Callback& cb) {
   int ts = obj_->NewRequest(kServerGroup);
   AddCallback(ts, [this, ts, keys, vals, lens, cb]() mutable {
-      mu_.lock();
-      auto& kvs = recv_kvs_[ts];
-      mu_.unlock();
+    mu_.lock();
+    auto& kvs = recv_kvs_[ts];
+    mu_.unlock();
 
-      // do check
-      size_t total_key = 0, total_val = 0;
-      for (const auto& s : kvs) {
-        Range range = FindRange(keys, s.keys.front(), s.keys.back()+1);
-        CHECK_EQ(range.size(), s.keys.size())
-            << "unmatched keys size from one server";
-        if (lens) CHECK_EQ(s.lens.size(), s.keys.size());
-        total_key += s.keys.size();
-        total_val += s.vals.size();
-      }
-      CHECK_EQ(total_key, keys.size()) << "lost some servers?";
+    // do check
+    size_t total_key = 0, total_val = 0;
+    for (const auto& s : kvs) {
+      Range range = FindRange(keys, s.keys.front(), s.keys.back() + 1);
+      CHECK_EQ(range.size(), s.keys.size()) << "unmatched keys size from one server";
+      if (lens) CHECK_EQ(s.lens.size(), s.keys.size());
+      total_key += s.keys.size();
+      total_val += s.vals.size();
+    }
+    CHECK_EQ(total_key, keys.size()) << "lost some servers?";
 
-      // fill vals and lens
-      std::sort(kvs.begin(), kvs.end(), [](
-          const KVPairs<Val>& a, const KVPairs<Val>& b) {
-                  return a.keys.front() < b.keys.front();
-        });
-      CHECK_NOTNULL(vals);
-      if (vals->empty()) {
-        vals->resize(total_val);
-      } else {
-        CHECK_EQ(vals->size(), total_val);
-      }
-      Val* p_vals = vals->data();
-      int *p_lens = nullptr;
-      if (lens) {
-        if (lens->empty()) {
-          lens->resize(keys.size());
-        } else {
-          CHECK_EQ(lens->size(), keys.size());
-        }
-        p_lens = lens->data();
-      }
-      for (const auto& s : kvs) {
-        memcpy(p_vals, s.vals.data(), s.vals.size() * sizeof(Val));
-        p_vals += s.vals.size();
-        if (p_lens) {
-          memcpy(p_lens, s.lens.data(), s.lens.size() * sizeof(int));
-          p_lens += s.lens.size();
-        }
-      }
-
-      mu_.lock();
-      recv_kvs_.erase(ts);
-      mu_.unlock();
-      if (cb) cb();
+    // fill vals and lens
+    std::sort(kvs.begin(), kvs.end(), [](const KVPairs<Val>& a, const KVPairs<Val>& b) {
+      return a.keys.front() < b.keys.front();
     });
+    CHECK_NOTNULL(vals);
+    if (vals->empty()) {
+      vals->resize(total_val);
+    } else {
+      CHECK_EQ(vals->size(), total_val);
+    }
+    Val* p_vals = vals->data();
+    int* p_lens = nullptr;
+    if (lens) {
+      if (lens->empty()) {
+        lens->resize(keys.size());
+      } else {
+        CHECK_EQ(lens->size(), keys.size());
+      }
+      p_lens = lens->data();
+    }
+    for (const auto& s : kvs) {
+      memcpy(p_vals, s.vals.data(), s.vals.size() * sizeof(Val));
+      p_vals += s.vals.size();
+      if (p_lens) {
+        memcpy(p_lens, s.lens.data(), s.lens.size() * sizeof(int));
+        p_lens += s.lens.size();
+      }
+    }
+
+    mu_.lock();
+    recv_kvs_.erase(ts);
+    mu_.unlock();
+    if (cb) cb();
+  });
 
   return ts;
 }

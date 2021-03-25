@@ -11,6 +11,8 @@ const int Meta::kEmpty = std::numeric_limits<int>::max();
 Customer::Customer(int app_id, int customer_id, const Customer::RecvHandle& recv_handle)
     : app_id_(app_id), customer_id_(customer_id), recv_handle_(recv_handle) {
   Postoffice::Get()->AddCustomer(this);
+  timeline_ = new Timeline();
+  timeline_->Init(Postoffice::Get()->my_rank(), app_id, customer_id);
   recv_thread_ = std::unique_ptr<std::thread>(new std::thread(&Customer::Receiving, this));
 }
 
@@ -20,6 +22,10 @@ Customer::~Customer() {
   msg.meta.control.cmd = Control::TERMINATE;
   recv_queue_.Push(msg);
   recv_thread_->join();
+  while (timeline_->IsInitialized()) {
+    timeline_->Shutdown();
+  }
+  delete timeline_;
 }
 
 int Customer::NewRequest(int recver) {
@@ -31,9 +37,8 @@ int Customer::NewRequest(int recver) {
 
 void Customer::WaitRequest(int timestamp) {
   std::unique_lock<std::mutex> lk(tracker_mu_);
-  tracker_cond_.wait(lk, [this, timestamp]{
-      return tracker_[timestamp].first == tracker_[timestamp].second;
-    });
+  tracker_cond_.wait(
+      lk, [this, timestamp] { return tracker_[timestamp].first == tracker_[timestamp].second; });
 }
 
 int Customer::NumResponse(int timestamp) {
@@ -50,8 +55,7 @@ void Customer::Receiving() {
   while (true) {
     Message recv;
     recv_queue_.WaitAndPop(&recv);
-    if (!recv.meta.control.empty() &&
-        recv.meta.control.cmd == Control::TERMINATE) {
+    if (!recv.meta.control.empty() && recv.meta.control.cmd == Control::TERMINATE) {
       break;
     }
     recv_handle_(recv);
